@@ -2,7 +2,7 @@
 @section('content')
     <h2>Data Rekening</h2>
     <div class="row">
-        <a class="btn btn-primary mb-2 mt-2 col-md-3" type="button" href="{{ route('rekening.create') }}">
+        <a class="btn btn-primary mb-2 mt-2 col-md-2" type="button" href="{{ route('rekening.create') }}">
             Tambah Data
         </a>
     </div>

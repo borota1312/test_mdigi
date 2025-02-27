@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Services\EntryHarianInterface;
+use App\Services\EntryHarianService;
+use App\Services\MasterTargetInterface;
+use App\Services\MasterTargetService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +15,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(EntryHarianInterface::class, EntryHarianService::class);
+        $this->app->bind(MasterTargetInterface::class, MasterTargetService::class);
     }
 
     /**

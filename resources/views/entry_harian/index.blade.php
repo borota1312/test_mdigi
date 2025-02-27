@@ -1,8 +1,8 @@
 @extends('layout.main')
 @section('content')
-    <h2>Master Data Target</h2>
+    <h2>Data Entry Harian</h2>
     <div class="row">
-        <a class="btn btn-primary mb-2 mt-2 col-md-2" type="button" href="{{ route('master_target.create') }}">
+        <a class="btn btn-primary mb-2 mt-2 col-md-2" type="button" href="{{ route('entry_harian.create') }}">
             Tambah Data
         </a>
     </div>
@@ -11,18 +11,30 @@
             <div class="d-flex justify-content-end align-items-center">
                 <div class="ms-2 me-2">Filter s/d Tanggal</div>
                 <input type="date" id="export_tanggal" class="form-control w-auto ms-2 me-2">
+                <div class="ms-2 me-2">Via Bayar</div>
+                <select id="export_via" class="form-select select2 w-auto ms-2 me-2">
+                    <option value="">Pilih Via Pembayaran</option>
+                    @foreach ($vias as $via)
+                        <option value="{{ $via->id }}">
+                            {{ $via->nama }}
+                        </option>
+                    @endforeach
+                </select>
                 <div class="ms-2 me-2">Export</div>
-                <button class="btn btn-danger me-2" onclick="exportPdf()"><i class="bi bi-file-pdf-fill"></i> PDF</button>
-                <button class="btn btn-success" onclick="exportExcel()"><i class="bi bi-file-excel-fill"></i> Excel</button>
+                <button class="btn btn-danger ms-2 me-2" onclick="exportPdf()"><i class="bi bi-file-pdf-fill"></i>
+                    PDF</button>
+                <button class="btn btn-success" onclick="exportExcel()"><i class="bi bi-file-excel-fill"></i>
+                    Excel</button>
             </div>
-            <table id="datatable_target" class="table table-responsive">
+            <table id="datatable_entry" class="table table-responsive">
                 <thead class="text-center">
                     <tr>
                         <th class="text-center">No</th>
                         <th>Kode Rekening</th>
                         <th>Nama Rekening</th>
-                        <th>Target(Rp)</th>
-                        <th>Masa Berlaku</th>
+                        <th>Via Bayar</th>
+                        <th>Tanggal Setor</th>
+                        <th>Jumlah Bayar</th>
                         <th>#</th>
                     </tr>
                 </thead>
@@ -34,8 +46,8 @@
 @endsection
 @section('script')
     <script type="text/javascript">
-        let master = [];
-        const table = $("#datatable_target").DataTable({
+        let rekening = [];
+        const table = $("#datatable_entry").DataTable({
             "pageLength": 10,
             "lengthMenu": [
                 [10, 25, 50, -1],
@@ -47,14 +59,15 @@
             "processing": true,
             "bServerSide": true,
             "order": [
-                [0, "desc"]
+                [0, "asc"]
             ],
             "ajax": {
-                url: "{{ route('master_target.datatables') }}",
+                url: "{{ route('entry_harian.datatables') }}",
                 type: "POST",
                 data: function(d) {
                     d._token = "{{ csrf_token() }}",
-                        d.tanggal = $('#export_tanggal').val()
+                        d.tanggal = $('#export_tanggal').val(),
+                        d.via_bayar = $('#export_via').val()
                 }
             },
             "columnDefs": [{
@@ -63,7 +76,7 @@
                 "sortable": false,
                 "className": "text-center",
                 "render": function(data, type, row, meta) {
-                    master[row.id] = row;
+                    rekening[row.id] = row;
                     return meta.row + meta.settings._iDisplayStart + 1;
                 }
             }, {
@@ -78,14 +91,14 @@
             }, {
                 "targets": 2,
                 "data": "nama_rekening",
-                "sortable": true,
                 "className": "text-center",
+                "sortable": true,
                 "render": function(data, type, row, meta) {
                     return data;
                 }
             }, {
                 "targets": 3,
-                "data": "target",
+                "data": "nama",
                 "className": "text-center",
                 "sortable": true,
                 "render": function(data, type, row, meta) {
@@ -94,19 +107,27 @@
                 }
             }, {
                 "targets": 4,
-                "data": "berlaku_start",
-                "sortable": false,
+                "data": "tanggal_setor",
                 "className": "text-center",
+                "sortable": false,
                 "render": function(data, type, row, meta) {
-                    return data + ' sd ' + row.berlaku_end;
+                    return data;
                 }
             }, {
                 "targets": 5,
+                "data": "jumlah_bayar",
+                "className": "text-center",
+                "sortable": false,
+                "render": function(data, type, row, meta) {
+                    return formatRupiah(data);
+                }
+            }, {
+                "targets": 6,
                 "data": "uuid",
                 "sortable": false,
                 "render": function(data, type, row, meta) {
                     let urlEdit =
-                        "{{ route('master_target.edit', ['uuid' => ':uuid']) }}".replace(':uuid',
+                        "{{ route('entry_harian.edit', ['uuid' => ':uuid']) }}".replace(':uuid',
                             data);
                     return `
                               <a class="btn btn-warning" href="${urlEdit}">Edit</a>
@@ -116,7 +137,7 @@
             }]
         });
 
-        $("#export_tanggal").change(function() {
+        $("#export_tanggal , #export_via").change(function() {
             filterTable();
         });
 
@@ -133,7 +154,7 @@
                 confirmButtonColor: "#3085d6",
                 cancelButtonColor: "#d33",
             }).then((result) => {
-                const url = "{{ route('master_target.destroy') }}"
+                const url = "{{ route('entry_harian.destroy') }}"
                 if (result.isConfirmed) {
                     $.ajax({
                         url,
@@ -181,32 +202,38 @@
 
         function exportExcel() {
             let filter = $('#export_tanggal').val() ?? null;
-            let url = "{{ route('master_target.excel') }}";
+            let via_bayar = $('#export_via').val() ?? null;
+            let url = "{{ route('entry_harian.excel') }}";
 
             $.ajax({
                 url: url,
                 type: "GET",
                 data: {
-                    filter: filter
+                    filter: filter,
+                    via_bayar: via_bayar
                 },
                 success: function(response) {
-                    window.location.href = url + "?filter=" + encodeURIComponent(filter);
+                    window.location.href = url + "?filter=" + encodeURIComponent(filter) + "&via_bayar=" +
+                        encodeURIComponent(via_bayar);
                 }
             });
         }
 
         function exportPdf() {
             let filter = $('#export_tanggal').val() ?? null;
-            let url = "{{ route('master_target.pdf') }}";
+            let via_bayar = $('#export_via').val() ?? null;
+            let url = "{{ route('entry_harian.pdf') }}";
 
             $.ajax({
                 url: url,
                 type: "GET",
                 data: {
-                    filter: filter
+                    filter: filter,
+                    via_bayar: via_bayar
                 },
                 success: function(response) {
-                    window.location.href = url + "?filter=" + encodeURIComponent(filter);
+                    window.location.href = url + "?filter=" + encodeURIComponent(filter) + "&via_bayar=" +
+                        encodeURIComponent(via_bayar);
                 }
             });
         }

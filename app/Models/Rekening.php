@@ -19,20 +19,21 @@ class Rekening extends Model
             'nama_rekening',
             'uuid'
         ];
-        $sortColumn = $columns[$request->input("order.0.column")];
-        $data = Rekening::select([
-            'id',
-            'kode_rekening',
-            'nama_rekening',
-            'uuid'
+
+        $columnIndex = $request->input('order.0.column', 0);
+
+        $sortColumn = isset($columns[$columnIndex]) ? $columns[$columnIndex] : 'rekenings.id';
+        $sortDirection = $request->input('order.0.dir', 'desc');
+        $query = Rekening::select([
+            'rekenings.*'
         ]);
         if (request()->input("search.value")) {
             $search = strtolower(request()->input("search.value"));
-            $data = $data->where(function ($query) use ($search) {
-                $query->whereRaw('LOWER(kode_rekening) like ?', "%$search%")
+            $query = $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(kode_rekening) like ?', "%$search%")
                     ->orWhereRaw('LOWER(nama_rekening) like ?', "%$search%");
             });
         }
-        return (new Datatables)->getDatatable($request, $data, $sortColumn);
+        return (new Datatables)->getDatatable($request, $query, $sortColumn, $sortDirection);
     }
 }

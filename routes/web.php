@@ -8,3 +8,4 @@ Route::get('/', function () {
 require __DIR__ . '/rekening/rekening.php';
 require __DIR__ . '/via_pembayaran/via_pembayaran.php';
 require __DIR__ . '/master_target/master_target.php';
+require __DIR__ . '/entry_harian/entry_harian.php';

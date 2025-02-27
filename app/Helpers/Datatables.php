@@ -4,20 +4,28 @@ namespace App\Helpers;
 
 class Datatables
 {
-    public function getDatatable($request, $query, $sortColumn)
+    public function getDatatable($request, $query, $sortColumn = null, $sortDirection = null)
     {
-        $totalFiltered = $query->get()->count();
-        if ($request->input('length') != -1) {
-            $query = $query->skip($request->input('start'))->take($request->input('length'));
+        $totalRecords = $query->count();
+
+        if ($sortColumn) {
+            $direction = $sortDirection ?? $request->input('order.0.dir', 'asc');
+            $query->orderBy($sortColumn, $direction);
         }
-        $sortedData = $query->orderBy($sortColumn, $request->input('order.0.dir'))->get();
-        $totalRecords = $sortedData->count();
+
+        $totalFiltered = $query->count();
+
+        if ($request->input('length') != -1) {
+            $query->skip($request->input('start'))->take($request->input('length'));
+        }
+
+        $data = $query->get();
 
         return response()->json([
-            'draw' => $request->input('draw'),
+            'draw' => intval($request->input('draw')),
             'recordsTotal' => $totalRecords,
             'recordsFiltered' => $totalFiltered,
-            'data' => $sortedData,
+            'data' => $data,
         ]);
     }
 }

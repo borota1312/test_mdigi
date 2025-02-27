@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\MasterTargetExport;
 use App\Http\Requests\RequestMasterTarget;
 use App\Models\MasterTarget;
 use App\Models\Rekening;
+use App\Services\MasterTargetInterface;
+use Carbon\Carbon;
+use PDF;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 use Throwable;
 
 class MasterTargetController extends Controller
@@ -108,5 +113,18 @@ class MasterTargetController extends Controller
         return $master->delete()
             ? response()->json(null, 204)
             : response()->json(['message' => 'Gagal menghapus data'], 400);
+    }
+
+    public function excel(Request $request, MasterTargetInterface $masterService)
+    {
+        $data = $masterService->getData($request);
+        return Excel::download(new MasterTargetExport($data), 'Master_Target.xlsx');
+    }
+    public function pdf(Request $request, MasterTargetInterface $masterService)
+    {
+        $data = $masterService->getData($request);
+        $pdf = PDF::loadView('master_target.pdf', $data)->setPaper('A4', 'landscape');
+
+        return $pdf->download('master_target.pdf');
     }
 }

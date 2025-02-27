@@ -18,18 +18,20 @@ class ViaPembayaran extends Model
             'nama',
             'uuid'
         ];
-        $sortColumn = $columns[$request->input("order.0.column")];
-        $data = ViaPembayaran::select([
-            'id',
-            'nama',
-            'uuid'
+
+        $columnIndex = $request->input('order.0.column', 0);
+
+        $sortColumn = isset($columns[$columnIndex]) ? $columns[$columnIndex] : 'via_pembayarans.id';
+        $sortDirection = $request->input('order.0.dir', 'desc');
+        $query = ViaPembayaran::select([
+            'via_pembayarans.*'
         ]);
         if (request()->input("search.value")) {
             $search = strtolower(request()->input("search.value"));
-            $data = $data->where(function ($query) use ($search) {
-                $query->whereRaw('LOWER(nama) like ?', "%$search%");
+            $query = $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(nama) like ?', "%$search%");
             });
         }
-        return (new Datatables)->getDatatable($request, $data, $sortColumn);
+        return (new Datatables)->getDatatable($request, $query, $sortColumn, $sortDirection);
     }
 }

@@ -11,6 +11,6 @@ Route::controller(MasterTargetController::class)->prefix('master_target')->group
     Route::put('update/{uuid}', 'update')->name('master_target.update');
     Route::delete('destroy', 'destroy')->name('master_target.destroy');
     Route::post('datatables', 'datatables')->name('master_target.datatables');
-    // Route::get('{uuid}/cetak', 'cetak')->name('master_target.cetak');
-
+    Route::get('excel', 'excel')->name('master_target.excel');
+    Route::get('pdf', 'pdf')->name('master_target.pdf');
 });

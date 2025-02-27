@@ -15,41 +15,55 @@ class MasterTarget extends Model
     public function datatable($request)
     {
         $columns = [
-            'id',
-            'rekening_id',
-            'target',
-            'berlaku_start',
-            'uuid'
+            'master_targets.id',
+            'rekenings.kode_rekening',
+            'rekenings.nama_rekening',
+            'master_targets.target',
+            'master_targets.berlaku_start',
+            'master_targets.uuid'
         ];
-        $sortColumn = $columns[$request->input("order.0.column")];
-        $data = MasterTarget::query()->select([
-            'id',
-            'rekening_id',
-            'target',
-            DB::raw("(DATE_FORMAT(berlaku_start,'%m-%d-%Y', 'id_ID')) as berlaku_start"),
-            DB::raw("(DATE_FORMAT(berlaku_end,'%m-%d-%Y', 'id_ID')) as berlaku_end"),
-            'uuid'
-        ]);
-        $data = $data->with('rekening');
-        if (request()->input("search.value")) {
-            $search = strtolower(request()->input("search.value"));
-            $data = $data->whereHas('rekening', function ($query) use ($search) {
-                $query->whereRaw('LOWER(kode_rekening) like ?', "%$search%")
-                    ->orWhereRaw('LOWER(nama_rekening) like ?', "%$search%");
+
+        $columnIndex = $request->input('order.0.column', 0);
+
+        $sortColumn = isset($columns[$columnIndex]) ? $columns[$columnIndex] : 'master_targets.id';
+        $sortDirection = $request->input('order.0.dir', 'desc');
+
+        DB::statement("SET lc_time_names = 'id_ID'");
+
+        $query = MasterTarget::query()
+            ->select([
+                'master_targets.id',
+                'master_targets.rekening_id',
+                'master_targets.target',
+                DB::raw("DATE_FORMAT(master_targets.berlaku_start,'%m-%d-%Y') as berlaku_start"),
+                DB::raw("DATE_FORMAT(master_targets.berlaku_end,'%m-%d-%Y') as berlaku_end"),
+                'master_targets.uuid',
+                'rekenings.kode_rekening',
+                'rekenings.nama_rekening'
+            ])
+            ->leftJoin('rekenings', 'master_targets.rekening_id', '=', 'rekenings.id');
+
+        if ($search = $request->input('search.value')) {
+            $search = strtolower($search);
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(rekenings.kode_rekening) LIKE ?', ["%{$search}%"])
+                    ->orWhereRaw('LOWER(rekenings.nama_rekening) LIKE ?', ["%{$search}%"]);
             });
         }
-        if (request()->input("tanggal") !== null) {
-            $date = Carbon::parse(request()->input("tanggal"))->format('Y-m-d');
-            $data->where(function ($query) use ($date) {
-                $query->whereDate('berlaku_start', $date)
-                    ->orWhereDate('berlaku_end', $date)
-                    ->orWhere(function ($subquery) use ($date) {
-                        $subquery->whereDate('berlaku_start', '<=', $date)
-                            ->whereDate('berlaku_end', '>=', $date);
+
+        if ($dateFilter = $request->input('tanggal')) {
+            $date = Carbon::parse($dateFilter)->format('Y-m-d');
+            $query->where(function ($q) use ($date) {
+                $q->whereDate('master_targets.berlaku_start', $date)
+                    ->orWhereDate('master_targets.berlaku_end', $date)
+                    ->orWhere(function ($sq) use ($date) {
+                        $sq->whereDate('master_targets.berlaku_start', '<=', $date)
+                            ->whereDate('master_targets.berlaku_end', '>=', $date);
                     });
             });
         }
-        return (new Datatables)->getDatatable($request, $data, $sortColumn);
+
+        return (new Datatables)->getDatatable($request, $query, $sortColumn, $sortDirection);
     }
 
     public function rekening()
